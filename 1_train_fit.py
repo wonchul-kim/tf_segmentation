@@ -1,0 +1,134 @@
+import os
+import os.path as osp
+import numpy as np
+import matplotlib.pyplot as plt
+
+import tensorflow as tf 
+
+import segmentation_models as sm
+from utils.helpers import visualize
+from src.datasets import CamvidDataset, Dataloader
+from utils.augment import get_training_augmentation, get_preprocessing, get_validation_augmentation
+
+### configurate GPUs settings
+# os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+physical_devices = tf.config.list_physical_devices('GPU')
+for physical_device in physical_devices:
+    try:
+        tf.config.experimental.set_memory_growth(physical_device, True)
+    except:
+        pass
+
+output_dir = './results'
+if not osp.exists(output_dir):
+    os.mkdir(output_dir)
+vis_results = osp.join(output_dir, 'figs')
+if not osp.exists(vis_results):
+    os.mkdir(vis_results)
+ckpt_results = osp.join(output_dir, 'checkpoints')
+if not osp.exists(ckpt_results):
+    os.mkdir(ckpt_results)
+
+
+### test dataloader
+DATA_DIR = '/home/wonchul/HDD/datasets/SegNet-Tutorial-master/CamVid'
+CLASSES = ['car', 'pedestrian']
+
+x_train_dir = os.path.join(DATA_DIR, 'train/images')
+y_train_dir = os.path.join(DATA_DIR, 'train/masks')
+
+x_valid_dir = os.path.join(DATA_DIR, 'val/images')
+y_valid_dir = os.path.join(DATA_DIR, 'val/masks')
+
+tmp_dataset = CamvidDataset(x_train_dir, y_train_dir, classes=['car', 'pedestrian'])
+
+image, mask = tmp_dataset[5] # get some sample
+visualize({"image" :image, "cars_mask": mask[..., 0].squeeze(), "sky_mask": mask[..., 1].squeeze(), "background_mask": mask[..., 2].squeeze()}, 
+            fp=osp.join(vis_results, 'raw.png'))
+
+tmp_dataset = CamvidDataset(x_train_dir, y_train_dir, classes=['car', 'sky'], augmentation=get_training_augmentation())
+
+image, mask = tmp_dataset[5] # get some sample
+visualize({"image" :image, "cars_mask": mask[..., 0].squeeze(), "sky_mask": mask[..., 1].squeeze(), "background_mask": mask[..., 2].squeeze()}, 
+            fp=osp.join(vis_results, 'aug.png'))
+
+### define training parameters
+n_classes = 1 if len(CLASSES) == 1 else (len(CLASSES) + 1)  # case for binary and multiclass segmentation
+activation = 'sigmoid' if n_classes == 1 else 'softmax'
+
+### Define model
+BACKBONE = 'efficientnetb1'
+BATCH_SIZE = 8
+LR = 0.0001
+EPOCHS = 300
+
+preprocess_input = sm.get_preprocessing(BACKBONE)
+model = sm.Unet(BACKBONE, classes=n_classes, activation=activation)
+optim = tf.keras.optimizers.Adam(LR)
+
+dice_loss = sm.losses.DiceLoss(class_weights=np.array([1, 2, 0.5])) 
+focal_loss = sm.losses.BinaryFocalLoss() if n_classes == 1 else sm.losses.CategoricalFocalLoss()
+total_loss = dice_loss + (1 * focal_loss)
+metrics = [sm.metrics.IOUScore(threshold=0.5), sm.metrics.FScore(threshold=0.5)]
+model.compile(optim, total_loss, metrics)
+
+### define datalader for train images
+train_dataset = CamvidDataset(
+    x_train_dir, 
+    y_train_dir, 
+    classes=CLASSES, 
+    augmentation=get_training_augmentation(),
+    preprocessing=get_preprocessing(preprocess_input),
+)
+
+valid_dataset = CamvidDataset(
+    x_valid_dir, 
+    y_valid_dir, 
+    classes=CLASSES, 
+    augmentation=get_validation_augmentation(),
+    preprocessing=get_preprocessing(preprocess_input),
+)
+
+train_dataloader = Dataloader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+valid_dataloader = Dataloader(valid_dataset, batch_size=1, shuffle=False)
+
+# check shapes for errors
+assert train_dataloader[0][0].shape == (BATCH_SIZE, 320, 320, 3)
+assert train_dataloader[0][1].shape == (BATCH_SIZE, 320, 320, n_classes)
+
+# define callbacks for learning rate scheduling and best checkpoints saving
+callbacks = [
+    tf.keras.callbacks.ModelCheckpoint(osp.join(ckpt_results, 'best_model.h5'), save_weights_only=True, save_best_only=True, mode='min'),
+    tf.keras.callbacks.ReduceLROnPlateau(),
+]
+
+# train model
+history = model.fit(
+    train_dataloader, 
+    steps_per_epoch=len(train_dataloader), 
+    epochs=EPOCHS, 
+    callbacks=callbacks, 
+    validation_data=valid_dataloader, 
+    validation_steps=len(valid_dataloader),
+)
+
+# Plot training & validation iou_score values
+plt.figure(figsize=(30, 5))
+plt.subplot(121)
+plt.plot(history.history['iou_score'])
+plt.plot(history.history['val_iou_score'])
+plt.title('Model iou_score')
+plt.ylabel('iou_score')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Test'], loc='upper left')
+
+# Plot training & validation loss values
+plt.subplot(122)
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('Model loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Test'], loc='upper left')
+plt.savefig("./figs/res.png")
+
