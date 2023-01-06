@@ -8,7 +8,9 @@ import tensorflow as tf
 import keras 
 import numpy as np 
 
+train_mode = 'fit'
 train_mode = 'ctl'
+
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 physical_devices = tf.config.list_physical_devices('GPU')
@@ -22,7 +24,7 @@ DATA_DIR = '/HDD/datasets/public/camvid'
 x_test_dir = os.path.join(DATA_DIR, 'val/images')
 y_test_dir = os.path.join(DATA_DIR, 'val/masks')
 
-BACKBONE = 'resnet50'
+BACKBONE = 'efficientnetb0'
 CLASSES = ['car', 'sky']
 LR = 0.0001
 
@@ -65,4 +67,6 @@ for i in ids:
     image = np.expand_dims(image, axis=0)
     pr_mask = model.predict(image)
     
-    visualize({"image": denormalize(image.squeeze()), "gt_mask": gt_mask.squeeze(), "pr_mask": pr_mask.squeeze()}, fp='./results/figs/{}_res_{}.png'.format(train_mode, i))
+    visualize({"image": denormalize(image.squeeze()), \
+            "gt_mask": gt_mask.squeeze(), "pr_mask": pr_mask.squeeze()}, \
+            fp='./results/figs/{}_res_{}.png'.format(train_mode, i))

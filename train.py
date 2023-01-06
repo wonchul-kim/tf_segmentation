@@ -34,7 +34,7 @@ if not osp.exists(ckpt_results):
 
 
 ### test dataloader
-DATA_DIR = '/HDD/datasets/public/camvid'
+DATA_DIR = '/HDD/datasets/public/SegNet-Tutorial-master/camvid/'
 CLASSES = ['car', 'sky']
 
 x_train_dir = os.path.join(DATA_DIR, 'train/images')
@@ -43,7 +43,7 @@ y_train_dir = os.path.join(DATA_DIR, 'train/masks')
 x_valid_dir = os.path.join(DATA_DIR, 'val/images')
 y_valid_dir = os.path.join(DATA_DIR, 'val/masks')
 
-input_height, input_width, input_channel = 128, 128, 3
+input_height, input_width, input_channel = 480, 480, 3
 tmp_dataset = CamvidDataset(x_train_dir, y_train_dir, classes=CLASSES, \
                 augmentation=get_training_augmentation(input_height, input_width))
 
@@ -59,9 +59,9 @@ n_classes = 1 if len(CLASSES) == 1 else (len(CLASSES) + 1)  # case for binary an
 activation = 'sigmoid' if n_classes == 1 else 'softmax'
 
 ### Define model
-BACKBONE = 'resnet50'
+BACKBONE = 'efficientnetb0'
 BATCH_SIZE = 2
-LR = 0.01
+LR = 0.0001
 EPOCHS = 10
 
 preprocess_input = sm.get_preprocessing(BACKBONE)
@@ -179,7 +179,7 @@ elif train_mode == 'ctl':
     VAL_LOSSES = []
     VAL_IOU_SCORES = []
     best_iou_score = 0.0
-    for epoch in range(300):
+    for epoch in range(EPOCHS):
         # initializes training losses and iou_scores lists for the epoch
         losses = []
         iou_scores = []
@@ -221,9 +221,18 @@ elif train_mode == 'ctl':
                 best_iou_score = sum(val_iou_scores) / len(val_iou_scores)
                 model.save_weights(osp.join(ckpt_results, '{}_best_model.h5'.format(train_mode)))
                 
-                preds = model(x_val)
-                visualize({"image" : denormalize(image.squeeze()), "gt_mask": y_val.squeeze(), \
-                    "pr_mask": preds.numpy().squeeze()}, fp=osp.join(vis_results, 'val_{}.png'.format(epoch)))
+                
+                # preds = model(x_val)
+                # visualize({"image" : denormalize(image.squeeze()), "gt_mask": y_val.squeeze(), \
+                #     "pr_mask": preds.numpy().squeeze()}, fp=osp.join(vis_results, 'val_{}.png'.format(epoch)))
+
+                for _val_step, _val_batch in enumerate(valid_dataloader):
+                    _x_val, _y_val = _val_batch[0], _val_batch[1]
+                    _preds = model(_x_val)
+                    visualize({"image" : denormalize(_x_val.squeeze()), "gt_mask": _y_val.squeeze(), \
+                        "pr_mask": _preds.numpy().squeeze()}, fp=osp.join(vis_results, 'val_{}_{}.png'.format(epoch, _val_step)))
+
+
 
                 print("------------------------------------------")
             VAL_LOSSES.append(sum(val_losses) / len(val_losses))
