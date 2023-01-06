@@ -8,6 +8,7 @@ import tensorflow as tf
 import keras 
 import numpy as np 
 
+train_mode = 'ctl'
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 physical_devices = tf.config.list_physical_devices('GPU')
@@ -17,7 +18,7 @@ except:
   # Invalid device or cannot modify virtual devices once initialized.
   pass
 
-DATA_DIR = '/HDD/datasets/CamVid'
+DATA_DIR = '/HDD/datasets/public/camvid'
 x_test_dir = os.path.join(DATA_DIR, 'val/images')
 y_test_dir = os.path.join(DATA_DIR, 'val/masks')
 
@@ -49,7 +50,7 @@ metrics = [sm.metrics.IOUScore(threshold=0.5), sm.metrics.FScore(threshold=0.5)]
 model.compile(optim, total_loss, metrics)
 
 # load best weights
-model.load_weights('./results/checkpoints/best_model.h5') 
+model.load_weights('./results/checkpoints/{}_best_model.h5'.format(train_mode)) 
 
 scores = model.evaluate_generator(test_dataloader)
 

@@ -11,7 +11,7 @@ from src.datasets import CamvidDataset, Dataloader
 from utils.augment import get_training_augmentation, get_preprocessing, get_validation_augmentation
 
 # train_mode = 'fit'
-train_mode = 'clt'
+train_mode = 'ctl'
 
 ### configurate GPUs settings
 # os.environ['CUDA_VISIBLE_DEVICES'] = '1'
@@ -118,7 +118,7 @@ if train_mode == 'fit':
         validation_data=valid_dataloader, 
         validation_steps=len(valid_dataloader),
     )
-elif train_mode == 'clt':
+elif train_mode == 'ctl':
     metrics = sm.metrics.IOUScore(threshold=0.5)
 
     @tf.function
