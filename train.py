@@ -34,7 +34,7 @@ if not osp.exists(ckpt_results):
 
 
 ### test dataloader
-DATA_DIR = '/HDD/datasets/CamVid'
+DATA_DIR = '/HDD/datasets/public/camvid'
 CLASSES = ['car', 'sky']
 
 x_train_dir = os.path.join(DATA_DIR, 'train/images')
