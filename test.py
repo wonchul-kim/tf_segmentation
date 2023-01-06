@@ -17,23 +17,24 @@ except:
   # Invalid device or cannot modify virtual devices once initialized.
   pass
 
-DATA_DIR = '/home/wonchul/HDD/datasets/SegNet-Tutorial-master/CamVid'
-x_test_dir = os.path.join(DATA_DIR, 'test')
-y_test_dir = os.path.join(DATA_DIR, 'testannot')
+DATA_DIR = '/HDD/datasets/CamVid'
+x_test_dir = os.path.join(DATA_DIR, 'val/images')
+y_test_dir = os.path.join(DATA_DIR, 'val/masks')
 
-BACKBONE = 'efficientnetb1'
-CLASSES = ['car', 'pedestrian']
+BACKBONE = 'resnet50'
+CLASSES = ['car', 'sky']
 LR = 0.0001
 
 n_classes = 1 if len(CLASSES) == 1 else (len(CLASSES) + 1)  # case for binary and multiclass segmentation
 activation = 'sigmoid' if n_classes == 1 else 'softmax'
 preprocess_input = sm.get_preprocessing(BACKBONE)
 
+input_height, input_width, input_channel = 128, 128, 3
 test_dataset = CamvidDataset(
     x_test_dir, 
     y_test_dir, 
     classes=CLASSES, 
-    augmentation=get_validation_augmentation(),
+    augmentation=get_validation_augmentation(input_height, input_width),
     preprocessing=get_preprocessing(preprocess_input),
 )
 test_dataloader = Dataloader(test_dataset, batch_size=1, shuffle=False)

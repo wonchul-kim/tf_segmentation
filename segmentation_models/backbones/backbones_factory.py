@@ -1,6 +1,6 @@
 import copy
 import efficientnet.model as eff
-from classification_models.models_factory import ModelsFactory
+from .classification_models.models_factory import ModelsFactory
 
 from . import inception_resnet_v2 as irv2
 from . import inception_v3 as iv3

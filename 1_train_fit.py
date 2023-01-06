@@ -31,8 +31,8 @@ if not osp.exists(ckpt_results):
 
 
 ### test dataloader
-DATA_DIR = '/home/wonchul/HDD/datasets/SegNet-Tutorial-master/CamVid'
-CLASSES = ['car', 'pedestrian']
+DATA_DIR = '/HDD/datasets/CamVid'
+CLASSES = ['car', 'sky']
 
 x_train_dir = os.path.join(DATA_DIR, 'train/images')
 y_train_dir = os.path.join(DATA_DIR, 'train/masks')
@@ -40,16 +40,15 @@ y_train_dir = os.path.join(DATA_DIR, 'train/masks')
 x_valid_dir = os.path.join(DATA_DIR, 'val/images')
 y_valid_dir = os.path.join(DATA_DIR, 'val/masks')
 
-tmp_dataset = CamvidDataset(x_train_dir, y_train_dir, classes=['car', 'pedestrian'])
+input_height, input_width, input_channel = 128, 128, 3
+tmp_dataset = CamvidDataset(x_train_dir, y_train_dir, classes=CLASSES, \
+                augmentation=get_training_augmentation(input_height, input_width))
 
 image, mask = tmp_dataset[5] # get some sample
-visualize({"image" :image, "cars_mask": mask[..., 0].squeeze(), "sky_mask": mask[..., 1].squeeze(), "background_mask": mask[..., 2].squeeze()}, 
-            fp=osp.join(vis_results, 'raw.png'))
+print("Dataset shape: ", image.shape)
 
-tmp_dataset = CamvidDataset(x_train_dir, y_train_dir, classes=['car', 'sky'], augmentation=get_training_augmentation())
-
-image, mask = tmp_dataset[5] # get some sample
-visualize({"image" :image, "cars_mask": mask[..., 0].squeeze(), "sky_mask": mask[..., 1].squeeze(), "background_mask": mask[..., 2].squeeze()}, 
+visualize({"image" :image, "cars_mask": mask[..., 0].squeeze(), \
+            "sky_mask": mask[..., 1].squeeze(), "background_mask": mask[..., 2].squeeze()}, 
             fp=osp.join(vis_results, 'aug.png'))
 
 ### define training parameters
@@ -57,12 +56,14 @@ n_classes = 1 if len(CLASSES) == 1 else (len(CLASSES) + 1)  # case for binary an
 activation = 'sigmoid' if n_classes == 1 else 'softmax'
 
 ### Define model
-BACKBONE = 'efficientnetb1'
-BATCH_SIZE = 8
+BACKBONE = 'resnet50'
+BATCH_SIZE = 2
 LR = 0.0001
-EPOCHS = 300
+EPOCHS = 10
 
 preprocess_input = sm.get_preprocessing(BACKBONE)
+print(preprocess_input)
+
 model = sm.Unet(BACKBONE, classes=n_classes, activation=activation)
 optim = tf.keras.optimizers.Adam(LR)
 
@@ -77,7 +78,7 @@ train_dataset = CamvidDataset(
     x_train_dir, 
     y_train_dir, 
     classes=CLASSES, 
-    augmentation=get_training_augmentation(),
+    augmentation=get_training_augmentation(input_height, input_width),
     preprocessing=get_preprocessing(preprocess_input),
 )
 
@@ -85,7 +86,7 @@ valid_dataset = CamvidDataset(
     x_valid_dir, 
     y_valid_dir, 
     classes=CLASSES, 
-    augmentation=get_validation_augmentation(),
+    augmentation=get_validation_augmentation(input_height, input_width),
     preprocessing=get_preprocessing(preprocess_input),
 )
 
@@ -93,8 +94,8 @@ train_dataloader = Dataloader(train_dataset, batch_size=BATCH_SIZE, shuffle=True
 valid_dataloader = Dataloader(valid_dataset, batch_size=1, shuffle=False)
 
 # check shapes for errors
-assert train_dataloader[0][0].shape == (BATCH_SIZE, 320, 320, 3)
-assert train_dataloader[0][1].shape == (BATCH_SIZE, 320, 320, n_classes)
+assert train_dataloader[0][0].shape == (BATCH_SIZE, input_height, input_width, 3)
+assert train_dataloader[0][1].shape == (BATCH_SIZE, input_height, input_width, n_classes)
 
 # define callbacks for learning rate scheduling and best checkpoints saving
 callbacks = [
@@ -130,5 +131,5 @@ plt.title('Model loss')
 plt.ylabel('Loss')
 plt.xlabel('Epoch')
 plt.legend(['Train', 'Test'], loc='upper left')
-plt.savefig("./figs/res.png")
+plt.savefig("./results/figs/res_{}.png".format(EPOCHS))
 
