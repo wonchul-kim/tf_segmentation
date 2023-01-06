@@ -65,4 +65,4 @@ for i in ids:
     image = np.expand_dims(image, axis=0)
     pr_mask = model.predict(image)
     
-    visualize({"image": denormalize(image.squeeze()), "gt_mask": gt_mask.squeeze(), "pr_mask": pr_mask.squeeze()}, fp='./results/figs/res_{}.png'.format(i))
+    visualize({"image": denormalize(image.squeeze()), "gt_mask": gt_mask.squeeze(), "pr_mask": pr_mask.squeeze()}, fp='./results/figs/{}_res_{}.png'.format(train_mode, i))

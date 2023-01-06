@@ -107,7 +107,7 @@ if train_mode == 'fit':
     
     # define callbacks for learning rate scheduling and best checkpoints saving
     callbacks = [
-        tf.keras.callbacks.ModelCheckpoint(osp.join(ckpt_results, 'best_model.h5'), save_weights_only=True, save_best_only=True, mode='min'),
+        tf.keras.callbacks.ModelCheckpoint(osp.join(ckpt_results, '{}_best_model.h5'.format(train_mode)), save_weights_only=True, save_best_only=True, mode='min'),
         tf.keras.callbacks.ReduceLROnPlateau(),
     ]
     history = model.fit(
@@ -118,6 +118,26 @@ if train_mode == 'fit':
         validation_data=valid_dataloader, 
         validation_steps=len(valid_dataloader),
     )
+    # Plot training & validation iou_score values
+    plt.figure(figsize=(30, 5))
+    plt.subplot(121)
+    plt.plot(history.history['iou_score'])
+    plt.plot(history.history['val_iou_score'])
+    plt.title('Model iou_score')
+    plt.ylabel('iou_score')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+
+    # Plot training & validation loss values
+    plt.subplot(122)
+    plt.plot(history.history['loss'])
+    plt.plot(history.history['val_loss'])
+    plt.title('Model loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+    plt.savefig("./results/figs/{}_res_{}.png".format(train_mode, EPOCHS))
+
 elif train_mode == 'ctl':
     metrics = sm.metrics.IOUScore(threshold=0.5)
 
@@ -199,7 +219,7 @@ elif train_mode == 'ctl':
                     
             if sum(val_iou_scores) / len(val_iou_scores) > best_iou_score:
                 best_iou_score = sum(val_iou_scores) / len(val_iou_scores)
-                model.save_weights(osp.join(ckpt_results, 'best_model_{}.h5'.format(epoch)))
+                model.save_weights(osp.join(ckpt_results, '{}_best_model_{}.h5'.format(train_mode, epoch)))
                 
                 preds = model(x_val)
                 visualize({"image" : denormalize(image.squeeze()), "gt_mask": y_val.squeeze(), \
@@ -210,24 +230,24 @@ elif train_mode == 'ctl':
             VAL_IOU_SCORES.append(sum(val_iou_scores) / len(val_iou_scores))
             
         print()
+        
+    # Plot training & validation iou_score values
+    plt.figure(figsize=(30, 5))
+    plt.subplot(121)
+    plt.plot(TRAIN_IOU_SCORES)
+    plt.plot(VAL_IOU_SCORES)
+    plt.title('Model iou_score')
+    plt.ylabel('iou_score')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
 
-# Plot training & validation iou_score values
-plt.figure(figsize=(30, 5))
-plt.subplot(121)
-plt.plot(history.history['iou_score'])
-plt.plot(history.history['val_iou_score'])
-plt.title('Model iou_score')
-plt.ylabel('iou_score')
-plt.xlabel('Epoch')
-plt.legend(['Train', 'Test'], loc='upper left')
-
-# Plot training & validation loss values
-plt.subplot(122)
-plt.plot(history.history['loss'])
-plt.plot(history.history['val_loss'])
-plt.title('Model loss')
-plt.ylabel('Loss')
-plt.xlabel('Epoch')
-plt.legend(['Train', 'Test'], loc='upper left')
-plt.savefig("./results/figs/res_{}.png".format(EPOCHS))
+    # Plot training & validation loss values
+    plt.subplot(122)
+    plt.plot(TRAIN_LOSSES)
+    plt.plot(VAL_LOSSES)
+    plt.title('Model loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+    plt.savefig("./results/figs/{}_res_{}.png".format(train_mode, EPOCHS))
 
