@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import tensorflow as tf 
 
 import segmentation_models as sm
-from utils.helpers import visualize
+from utils.helpers import visualize, denormalize
 from src.datasets import CamvidDataset, Dataloader
 from utils.augment import get_training_augmentation, get_preprocessing, get_validation_augmentation
 
@@ -189,18 +189,23 @@ elif train_mode == 'clt':
 
                 # val_loss, val_iou_score = distributed_val_step(x_val, y_val)
                 val_loss, val_iou_score = validation_step(x_val, y_val)
-
+                
                 val_losses.append(val_loss)
                 val_iou_scores.append(val_iou_score)
 
                 print("** \rEpoch: {} >> Val_Loss: {} >> Val_IOU-Score: {} ".format(epoch, np.round(sum(val_losses) / len(val_losses), 4), \
                                     np.round(sum(val_iou_scores) / len(val_iou_scores), 4)), end="")
+                
                     
             if sum(val_iou_scores) / len(val_iou_scores) > best_iou_score:
                 best_iou_score = sum(val_iou_scores) / len(val_iou_scores)
-                model.save_weights(osp.join(ckpt_results, 'best_model.h5'))
+                model.save_weights(osp.join(ckpt_results, 'best_model_{}.h5'.format(epoch)))
+                
+                preds = model(x_val)
+                visualize({"image" : denormalize(image.squeeze()), "gt_mask": y_val.squeeze(), \
+                    "pr_mask": preds.numpy().squeeze()}, fp=osp.join(vis_results, 'val_{}.png'.format(epoch)))
 
-
+                print("------------------------------------------")
             VAL_LOSSES.append(sum(val_losses) / len(val_losses))
             VAL_IOU_SCORES.append(sum(val_iou_scores) / len(val_iou_scores))
             
