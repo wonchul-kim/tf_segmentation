@@ -61,7 +61,7 @@ activation = 'sigmoid' if n_classes == 1 else 'softmax'
 ### Define model
 BACKBONE = 'resnet50'
 BATCH_SIZE = 2
-LR = 0.0001
+LR = 0.01
 EPOCHS = 10
 
 preprocess_input = sm.get_preprocessing(BACKBONE)
@@ -219,7 +219,7 @@ elif train_mode == 'ctl':
                     
             if sum(val_iou_scores) / len(val_iou_scores) > best_iou_score:
                 best_iou_score = sum(val_iou_scores) / len(val_iou_scores)
-                model.save_weights(osp.join(ckpt_results, '{}_best_model_{}.h5'.format(train_mode, epoch)))
+                model.save_weights(osp.join(ckpt_results, '{}_best_model.h5'.format(train_mode)))
                 
                 preds = model(x_val)
                 visualize({"image" : denormalize(image.squeeze()), "gt_mask": y_val.squeeze(), \
