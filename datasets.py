@@ -4,7 +4,7 @@ from utils.augment import get_training_augmentation, get_preprocessing, get_vali
 from utils.helpers import visualize
 
 
-def get_datasets(input_dir, input_height, input_width, input_channel, classes, batch_size, debug_dir, preprocess_input=None):
+def get_datasets(input_dir, input_height, input_width, input_channel, classes, train_batch_size, val_batch_size, debug_dir, preprocess_input=None):
 
     x_train_dir = osp.join(input_dir, 'train/images')
     y_train_dir = osp.join(input_dir, 'train/masks')
@@ -39,11 +39,11 @@ def get_datasets(input_dir, input_height, input_width, input_channel, classes, b
         preprocessing=get_preprocessing(preprocess_input),
     )
 
-    train_dataloader = Dataloader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_dataloader = Dataloader(val_dataset, batch_size=1, shuffle=False)
+    train_dataloader = Dataloader(train_dataset, batch_size=train_batch_size, shuffle=True)
+    val_dataloader = Dataloader(val_dataset, batch_size=val_batch_size, shuffle=False)
 
     # check shapes for errors
-    assert train_dataloader[0][0].shape == (batch_size, input_height, input_width, 3)
-    assert train_dataloader[0][1].shape == (batch_size, input_height, input_width, len(classes) + 1)
+    assert train_dataloader[0][0].shape == (train_batch_size, input_height, input_width, 3)
+    assert train_dataloader[0][1].shape == (train_batch_size, input_height, input_width, len(classes) + 1)
 
     return train_dataset, val_dataset, train_dataloader, val_dataloader
