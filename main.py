@@ -170,4 +170,24 @@ elif train_mode == 'ctl_multigpus':
             return loss
 
 
-    train_ctl_multigpus(strategy, model, EPOCHS, BATCH_SIZE, optimizer, loss_fn, train_dist_dataset, val_dist_dataset, val_dir, weights_dir, metrics=metrics, callbacks=callbacks)
+    TRAIN_IOU_SCORES, VAL_IOU_SCORES, TRAIN_LOSSES, VAL_LOSSES = train_ctl_multigpus(strategy, model, EPOCHS, BATCH_SIZE, optimizer, loss_fn, train_dist_dataset, val_dist_dataset, val_dir, weights_dir, metrics=metrics, callbacks=callbacks)
+
+    # Plot training & validation iou_score values
+    plt.figure(figsize=(30, 5))
+    plt.subplot(121)
+    plt.plot(TRAIN_IOU_SCORES)
+    plt.plot(VAL_IOU_SCORES)
+    plt.title('Model iou_score')
+    plt.ylabel('iou_score')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+
+    # Plot training & validation loss values
+    plt.subplot(122)
+    plt.plot(TRAIN_LOSSES)
+    plt.plot(VAL_LOSSES)
+    plt.title('Model loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Test'], loc='upper left')
+    plt.savefig(osp.join(output_dir, "fit_res_{}.png".format(EPOCHS)))
