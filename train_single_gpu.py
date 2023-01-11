@@ -6,8 +6,6 @@ from utils.helpers import visualize, denormalize
 
 def train_fit(model, epochs, optimizer, loss_fn, train_dataloader, val_dataloader, metrics=None, callbacks=None):
     model.compile(optimizer, loss_fn, metrics)
-    
-    # define callbacks for learning rate scheduling and best checkpoints saving
 
     history = model.fit(
         train_dataloader, 
