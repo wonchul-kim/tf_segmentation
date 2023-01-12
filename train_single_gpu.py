@@ -18,13 +18,11 @@ def train_fit(model, epochs, optimizer, loss_fn, train_dataloader, val_dataloade
 
     return history
 
-def train_ctl(model, epochs, optimizer, loss_fn, train_dataloader, train_steps, val_dataloader, val_steps, val_dir, weights_dir, metrics=None, callbacks=None):
-
+def train_ctl(model, epochs, optimizer, loss_fn, train_dataloader, val_dataloader, val_dir, weights_dir, metrics=None, callbacks=None):
     @tf.function
     def train_step(x, y):
         with tf.GradientTape() as tape:
             preds = model(x)
-            # preds = tf.cast(preds, tf.float32)
             y = tf.cast(y, tf.float32)
             loss = loss_fn(y, preds)
             iou = metrics(y, preds)
@@ -56,17 +54,14 @@ def train_ctl(model, epochs, optimizer, loss_fn, train_dataloader, train_steps, 
         for step, (batch) in enumerate(train_dataloader):
 
             x, y = batch[0], batch[1]
-            # run one training step for the current batch
             loss, iou = train_step(x, y)
-
-            # Save current batch loss and iou-score
             losses.append(float(loss))
             iou_scores.append(float(iou))
 
-            print("\r Epoch: {} >> step: {}/{} >> train-loss: {} >> IOU: {}".format(epoch, step, train_steps, \
+            print("\r Epoch: {} >> step: {} >> train-loss: {} >> IOU: {}".format(epoch, step, \
                                 np.round(sum(losses) / len(losses), 4), np.round(sum(iou_scores) / len(iou_scores), 4)), end="")
 
-        # Save the train and validation losses and iou scores for each epoch.
+        train_dataloader.on_epoch_end()
         TRAIN_LOSSES.append(sum(losses) / len(losses))
         TRAIN_IOU_SCORES.append(sum(iou_scores) / len(iou_scores))
             
@@ -77,13 +72,12 @@ def train_ctl(model, epochs, optimizer, loss_fn, train_dataloader, train_steps, 
             for val_step, val_batch in enumerate(val_dataloader):
                 x_val, y_val = val_batch[0], val_batch[1]
 
-                # val_loss, val_iou_score = distributed_val_step(x_val, y_val)
                 val_loss, val_iou_score = validation_step(x_val, y_val)
                 
                 val_losses.append(val_loss)
                 val_iou_scores.append(val_iou_score)
 
-                print("** \rEpoch: {} >> step: {}/{} >> Val_Loss: {} >> Val_IOU-Score: {} ".format(epoch, val_step, val_steps, np.round(sum(val_losses) / len(val_losses), 4), \
+                print("** \rEpoch: {} >> step: {} >> Val_Loss: {} >> Val_IOU-Score: {} ".format(epoch, val_step, np.round(sum(val_losses) / len(val_losses), 4), \
                                     np.round(sum(val_iou_scores) / len(val_iou_scores), 4)), end="")
                 
                     
