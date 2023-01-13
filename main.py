@@ -22,7 +22,7 @@ output_dir = './results'
 
 ### test dataloader
 # DATA_DIR = '/DeepLearning/_uinttest/public/camvid'
-DATA_DIR = "/HDD/datasets/public/SegNet-Tutorial-master/camvid"
+DATA_DIR = "/HDD/datasets/public//camvid"
 input_height, input_width, input_channel = 256, 256, 3
 CLASSES = ['car', 'sky', "pedestrian"]
 
