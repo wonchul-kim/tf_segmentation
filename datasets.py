@@ -39,8 +39,6 @@ def get_datasets(input_dir, input_height, input_width, input_channel, classes, t
         preprocessing=get_preprocessing(preprocess_input),
     )
 
-    print(f"")
-
     train_dataloader = Dataloader(train_dataset, batch_size=train_batch_size, shuffle=True)
     val_dataloader = Dataloader(val_dataset, batch_size=val_batch_size, shuffle=False)
 

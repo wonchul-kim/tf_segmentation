@@ -12,18 +12,19 @@ from dist_datasets import get_dist_dataset
 from modeling import get_model
 from losses import get_loss_fn
 from train_single_gpu import train_fit, train_ctl
-from train_multiple_gpus import train_ctl_multigpus
+from train_multiple_gpus import train_ctl_multigpus, train_fit_multigpus
 
 # train_mode = 'fit'
-train_mode = 'ctl'
-# train_mode = 'ctl_multigpus'
+# train_mode = 'ctl'
+# train_mode = 'fit_multigpus'
+train_mode = 'ctl_multigpus'
 output_dir = './results'
 
 ### test dataloader
 # DATA_DIR = '/DeepLearning/_uinttest/public/camvid'
 DATA_DIR = "/HDD/datasets/public/SegNet-Tutorial-master/camvid"
 input_height, input_width, input_channel = 256, 256, 3
-CLASSES = ['car', 'sky']
+CLASSES = ['car', 'sky', "pedestrian"]
 
 MODEL_NAME = 'unet'
 BACKBONE = 'efficientnetb0'
@@ -70,12 +71,12 @@ if train_mode == 'fit' or train_mode == 'ctl':
     train_dataset, val_dataset, train_dataloader, val_dataloader = \
             get_datasets(DATA_DIR, input_height, input_width, input_channel, CLASSES, BATCH_SIZE, 1, debug_dir, preprocess_input)
 
-    model = get_model(MODEL_NAME, input_height, input_width, input_channel, BACKBONE, len(CLASSES) + 1)
+    model = get_model(MODEL_NAME, input_height, input_width, input_channel, BACKBONE, num_classes)
     if OPT == 'adam':
         optimizer = tf.keras.optimizers.Adam(learning_rate=LR, clipvalue=0.5)
     elif OPT == 'sgd':
         optimizer = tf.keras.optimizers.SGD(learning_rate=LR, momentum=0.9) # LR = 0.2
-    loss_fn = get_loss_fn(len(CLASSES) + 1)
+    loss_fn = get_loss_fn(num_classes)
 
     if train_mode == 'fit':
         metrics = [sm.metrics.IOUScore(threshold=0.5), sm.metrics.FScore(threshold=0.5)]
@@ -104,7 +105,7 @@ if train_mode == 'fit' or train_mode == 'ctl':
         plt.ylabel('Loss')
         plt.xlabel('Epoch')
         plt.legend(['Train', 'Val'], loc='upper left')
-        plt.savefig(osp.join(output_dir, "fit_res_{}.png".format(EPOCHS)))
+        plt.savefig(osp.join(output_dir, "{}_res_{}.png".format(train_mode, EPOCHS)))
 
     elif train_mode == 'ctl':
         callbacks = None
@@ -130,9 +131,9 @@ if train_mode == 'fit' or train_mode == 'ctl':
         plt.ylabel('Loss')
         plt.xlabel('Epoch')
         plt.legend(['Train', 'Val'], loc='upper left')
-        plt.savefig(osp.join(output_dir, "fit_res_{}.png".format(EPOCHS)))
+        plt.savefig(osp.join(output_dir, "{}_res_{}.png".format(train_mode, EPOCHS)))
 
-elif train_mode == 'ctl_multigpus':
+elif train_mode == 'ctl_multigpus' or train_mode == 'fit_multigpus':
     callbacks = None
     strategy = tf.distribute.MirroredStrategy()
     print('* Number of devices: {}'.format(strategy.num_replicas_in_sync))
@@ -140,45 +141,83 @@ elif train_mode == 'ctl_multigpus':
     train_dataset, val_dataset, train_dataloader, val_dataloader = \
             get_datasets(DATA_DIR, input_height, input_width, input_channel, CLASSES, BATCH_SIZE, strategy.num_replicas_in_sync, debug_dir, preprocess_input)
     
-    train_dist_dataset = get_dist_dataset(strategy, train_dataloader)
-    val_dist_dataset = get_dist_dataset(strategy, val_dataloader)
+    if train_mode == 'fit_multigpus':
+        with strategy.scope():
+            model = get_model(MODEL_NAME, input_height, input_width, input_channel, BACKBONE, num_classes)
+            if OPT == 'adam':
+                optimizer = tf.keras.optimizers.Adam(learning_rate=LR, clipvalue=0.5)
+            elif OPT == 'sgd':
+                optimizer = tf.keras.optimizers.SGD(learning_rate=LR, momentum=0.9) # LR = 0.2
 
-    with strategy.scope():
-        model = get_model(MODEL_NAME, input_height, input_width, input_channel, BACKBONE, len(CLASSES) + 1)
-        if OPT == 'adam':
-            optimizer = tf.keras.optimizers.Adam(learning_rate=LR, clipvalue=0.5)
-        elif OPT == 'sgd':
-            optimizer = tf.keras.optimizers.SGD(learning_rate=LR, momentum=0.9) # LR = 0.2
+            loss_fn = get_loss_fn(num_classes)
+            metrics = sm.metrics.IOUScore(threshold=0.5)
+            # metrics = [sm.metrics.IOUScore(threshold=0.5), sm.metrics.FScore(threshold=0.5)]
 
-        loss_fn = get_loss_fn(len(CLASSES) + 1)
-        metrics = sm.metrics.IOUScore(threshold=0.5)
-        # metrics = [sm.metrics.IOUScore(threshold=0.5), sm.metrics.FScore(threshold=0.5)]
+            model.compile(optimizer, loss_fn, metrics)
 
-        def compute_loss(labels, preds):
-            per_example_loss = loss_fn(labels, preds)
-            loss = tf.nn.compute_average_loss(per_example_loss,
-                                            global_batch_size=BATCH_SIZE*strategy.num_replicas_in_sync)
-            return loss
+        history = train_fit_multigpus(model, EPOCHS, train_dataloader, val_dataloader, callbacks=callbacks)
 
+        # Plot training & validation iou_score values
+        plt.figure(figsize=(30, 5))
+        plt.subplot(121)
+        plt.plot(history.history['iou_score'])
+        plt.plot(history.history['val_iou_score'])
+        plt.title('Model iou_score')
+        plt.ylabel('iou_score')
+        plt.xlabel('Epoch')
+        plt.legend(['Train', 'Val'], loc='upper left')
 
-    TRAIN_IOU_SCORES, VAL_IOU_SCORES, TRAIN_LOSSES, VAL_LOSSES = train_ctl_multigpus(strategy, model, EPOCHS, BATCH_SIZE, optimizer, loss_fn, train_dist_dataset, val_dist_dataset, val_dir, weights_dir, metrics=metrics, callbacks=callbacks)
+        # Plot training & validation loss values
+        plt.subplot(122)
+        plt.plot(history.history['loss'])
+        plt.plot(history.history['val_loss'])
+        plt.title('Model loss')
+        plt.ylabel('Loss')
+        plt.xlabel('Epoch')
+        plt.legend(['Train', 'Val'], loc='upper left')
+        plt.savefig(osp.join(output_dir, "{}_res_{}.png".format(train_mode, EPOCHS)))
 
-    # Plot training & validation iou_score values
-    plt.figure(figsize=(30, 5))
-    plt.subplot(121)
-    plt.plot(TRAIN_IOU_SCORES)
-    plt.plot(VAL_IOU_SCORES)
-    plt.title('Model iou_score')
-    plt.ylabel('iou_score')
-    plt.xlabel('Epoch')
-    plt.legend(['Train', 'Val'], loc='upper left')
+    elif train_mode == 'ctl_multigpus':
+        train_dist_dataset = get_dist_dataset(strategy, train_dataloader)
+        val_dist_dataset = get_dist_dataset(strategy, val_dataloader)
 
-    # Plot training & validation loss values
-    plt.subplot(122)
-    plt.plot(TRAIN_LOSSES)
-    plt.plot(VAL_LOSSES)
-    plt.title('Model loss')
-    plt.ylabel('Loss')
-    plt.xlabel('Epoch')
-    plt.legend(['Train', 'Val'], loc='upper left')
-    plt.savefig(osp.join(output_dir, "fit_res_{}.png".format(EPOCHS)))
+        with strategy.scope():
+            model = get_model(MODEL_NAME, input_height, input_width, input_channel, BACKBONE, num_classes)
+            if OPT == 'adam':
+                optimizer = tf.keras.optimizers.Adam(learning_rate=LR, clipvalue=0.5)
+            elif OPT == 'sgd':
+                optimizer = tf.keras.optimizers.SGD(learning_rate=LR, momentum=0.9) # LR = 0.2
+
+            loss_fn = get_loss_fn(num_classes)
+            metrics = sm.metrics.IOUScore(threshold=0.5)
+            # metrics = [sm.metrics.IOUScore(threshold=0.5), sm.metrics.FScore(threshold=0.5)]
+
+            def compute_loss(labels, preds):
+                per_example_loss = loss_fn(labels, preds)
+                loss = tf.nn.compute_average_loss(tf.expand_dims(per_example_loss, axis=0),
+                                                global_batch_size=BATCH_SIZE*strategy.num_replicas_in_sync)
+                # loss = tf.reduce_sum(loss) * (1./(batch_size*strategy.num_replicas_in_sync))
+                return loss
+
+        TRAIN_IOU_SCORES, VAL_IOU_SCORES, TRAIN_LOSSES, VAL_LOSSES = train_ctl_multigpus(strategy, model, EPOCHS, optimizer, \
+                    loss_fn, train_dist_dataset, val_dist_dataset, val_dataloader, val_dir, weights_dir, compute_loss, metrics=metrics, callbacks=callbacks)
+
+        # Plot training & validation iou_score values
+        plt.figure(figsize=(30, 5))
+        plt.subplot(121)
+        plt.plot(TRAIN_IOU_SCORES)
+        plt.plot(VAL_IOU_SCORES)
+        plt.title('Model iou_score')
+        plt.ylabel('iou_score')
+        plt.xlabel('Epoch')
+        plt.legend(['Train', 'Val'], loc='upper left')
+
+        # Plot training & validation loss values
+        plt.subplot(122)
+        plt.plot(TRAIN_LOSSES)
+        plt.plot(VAL_LOSSES)
+        plt.title('Model loss')
+        plt.ylabel('Loss')
+        plt.xlabel('Epoch')
+        plt.legend(['Train', 'Val'], loc='upper left')
+        plt.savefig(osp.join(output_dir, "{}_res_{}.png".format(train_mode, EPOCHS)))
