@@ -21,6 +21,7 @@ def train_fit(model, epochs, optimizer, loss_fn, train_dataloader, val_dataloade
 def train_ctl(model, epochs, optimizer, loss_fn, train_dataloader, val_dataloader, val_dir, weights_dir, metrics=None, callbacks=None):
     @tf.function
     def train_step(x, y):
+        print("-- train: ", x.shape, y.shape)
         with tf.GradientTape() as tape:
             preds = model(x)
             y = tf.cast(y, tf.float32)
@@ -52,7 +53,6 @@ def train_ctl(model, epochs, optimizer, loss_fn, train_dataloader, val_dataloade
         iou_scores = []
 
         for step, (batch) in enumerate(train_dataloader):
-
             x, y = batch[0], batch[1]
             loss, iou = train_step(x, y)
             losses.append(float(loss))

@@ -18,11 +18,19 @@ def get_model(model_name, input_height, input_width, input_channel, backbone, nu
                     height=input_height, width=input_width, include_top=False, pooling=None)
 
         BACKBONE_TRAINABLE = False
-        model = tasm.DANet(num_classes=num_classes, base_model=base_model, output_layers=layers, \
+        model = tasm.DANet(n_classes=num_classes, base_model=base_model, output_layers=layers, \
             backbone_trainable=BACKBONE_TRAINABLE)
 
     # iou_score = tasm.metrics.IOUScore(threshold=0.5)
     # categorical_focal_dice_loss = tasm.losses.CategoricalFocalLoss(alpha=0.25, gamma=2.0) + tasm.losses.DiceLoss(class_weights=class_weights)
+    elif model_name == 'deeplabv3plus':  
+        base_model, layers, layer_names = tasm.create_base_model(name=backbone, weights="imagenet", \
+                    height=input_height, width=input_width, include_top=False, pooling=None)
+
+        BACKBONE_TRAINABLE = False
+        model = tasm.DeepLabV3plus(n_classes=num_classes, base_model=base_model, output_layers=layers, \
+            backbone_trainable=BACKBONE_TRAINABLE)
+
 
     ########## unet-series
     elif model_name == 'swinunet':

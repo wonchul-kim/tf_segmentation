@@ -25,7 +25,6 @@ def train_ctl_multigpus(strategy, model, epochs, optimizer, loss_fn, train_dist_
     @tf.function
     def train_step(batch):
         image, label = batch 
-        print(image)
         label = tf.cast(label, tf.float32)
         with tf.GradientTape() as tape:
             preds = model(image)
@@ -85,61 +84,59 @@ def train_ctl_multigpus(strategy, model, epochs, optimizer, loss_fn, train_dist_
     best_iou_score = 0.0
     best_val_loss = 999
     for epoch in range(epochs):
-        # # train_loss, train_total_iou, num_train_batches = distributed_train_epoch(train_dist_dataset)
-        # train_losses = 0.
-        # train_total_iou = 0.
-        # num_train_batches = 0
-        # for batch_idx, batch in enumerate(train_dist_dataset):
-        #     per_replica_loss, per_replica_iou = strategy.run(train_step, args=(batch,))
-        #     train_loss = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_loss, axis=None)
-        #     train_iou = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_iou, axis=None)
-        #     train_losses += train_loss
-        #     train_total_iou += train_iou
-        #     num_train_batches += 1
+        # train_loss, train_total_iou, num_train_batches = distributed_train_epoch(train_dist_dataset)
+        train_losses = 0.
+        train_total_iou = 0.
+        num_train_batches = 0
+        for batch_idx, batch in enumerate(train_dist_dataset):
+            per_replica_loss, per_replica_iou = strategy.run(train_step, args=(batch,))
+            train_loss = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_loss, axis=None)
+            train_iou = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_iou, axis=None)
+            train_losses += train_loss
+            train_total_iou += train_iou
+            num_train_batches += 1
         
-        #     train_avg_loss = train_losses / num_train_batches / strategy.num_replicas_in_sync
-        #     train_avg_iou = train_total_iou / num_train_batches / strategy.num_replicas_in_sync
-        #     print('\r* TRAIN >> Epoch: {}, step: {},  Train Loss: {}, Train IoU: {}'.format(epoch, batch_idx, \
-        #                                                         np.round(train_avg_loss, 4), \
-        #                                                         np.round(train_avg_iou, 4)), end='')
+            train_avg_loss = train_losses / num_train_batches / strategy.num_replicas_in_sync
+            train_avg_iou = train_total_iou / num_train_batches / strategy.num_replicas_in_sync
+            print('\r* TRAIN >> Epoch: {}, step: {},  Train Loss: {}, Train IoU: {}'.format(epoch, batch_idx, \
+                                                                np.round(train_avg_loss, 4), \
+                                                                np.round(train_avg_iou, 4)), end='')
 
 
-        # num_val_batches = 0
-        # for batch in val_dist_dataset:
-        #     strategy.run(val_step, args=(batch,))
-        #     num_val_batches += 1
+        num_val_batches = 0
+        for batch in val_dist_dataset:
+            strategy.run(val_step, args=(batch,))
+            num_val_batches += 1
 
-        # val_loss, val_total_iou = val_unscaled_loss.result(), val_unscaled_iou.result()
-        # val_unscaled_iou.reset_states()
-        # val_unscaled_loss.reset_states()
-        # val_avg_loss = val_loss / num_val_batches / strategy.num_replicas_in_sync
-        # val_avg_iou = val_total_iou / num_val_batches / strategy.num_replicas_in_sync
+        val_loss, val_total_iou = val_unscaled_loss.result(), val_unscaled_iou.result()
+        val_unscaled_iou.reset_states()
+        val_unscaled_loss.reset_states()
+        val_avg_loss = val_loss / num_val_batches / strategy.num_replicas_in_sync
+        val_avg_iou = val_total_iou / num_val_batches / strategy.num_replicas_in_sync
 
-        # print('***** VAL >> Epoch: {}, Val Loss: {}, Val IoU: {}'.format(epoch, np.round(val_avg_loss, 4), np.round(val_avg_iou, 4)))
+        print('\n***** VAL >> Epoch: {}, Val Loss: {}, Val IoU: {}'.format(epoch, np.round(val_avg_loss, 4), np.round(val_avg_iou, 4)))
 
-        # if best_val_loss > val_avg_loss:
-        #     best_val_loss = val_avg_loss
-        #     model.save_weights(osp.join(weights_dir, 'best_model.h5'))
+        if best_val_loss > val_avg_loss:
+            best_val_loss = val_avg_loss
+            model.save_weights(osp.join(weights_dir, 'best_model.h5'))
 
-        for __val_step, __val_batch in enumerate(val_dist_dataset):
-            for _val_step, _val_batch in enumerate(__val_batch):
-                _x_val, _y_val = _val_batch.values[0], _val_batch.values[1]
-                print(_x_val.shape, _y_val.shape, _val_step)
-                _preds = model(_x_val)
-                visualize({"image" : denormalize(_x_val.numpy().squeeze()), "gt_mask": _y_val.numpy().squeeze(), \
-                    "pr_mask": _preds.numpy().squeeze()}, fp=osp.join(val_dir, 'val_{}_{}_{}.png'.format(epoch, __val_step, _val_step)))
-
-    #     # Save the train and validation losses and iou scores for each epoch.
-    #     TRAIN_LOSSES.append(train_avg_loss)
-    #     TRAIN_IOU_SCORES.append(train_avg_iou)
-    #     VAL_LOSSES.append(val_avg_loss)
-    #     VAL_IOU_SCORES.append(val_avg_iou)
+            for __val_step, __val_batch in enumerate(val_dataloader):
+                for _val_step, (_val_image, _val_mask) in enumerate(zip(__val_batch[0], __val_batch[1])):
+                    _preds = model(tf.expand_dims(_val_image, 0))
+                    visualize({"image" : denormalize(_val_image), "gt_mask": _val_mask, \
+                        "pr_mask": _preds.numpy().squeeze()}, fp=osp.join(val_dir, 'val_{}_{}_{}.png'.format(epoch, __val_step, _val_step)))
+                
+        # Save the train and validation losses and iou scores for each epoch.
+        TRAIN_LOSSES.append(train_avg_loss)
+        TRAIN_IOU_SCORES.append(train_avg_iou)
+        VAL_LOSSES.append(val_avg_loss)
+        VAL_IOU_SCORES.append(val_avg_iou)
 
 
 
-    #     # if sum(val_iou_scores) / len(val_iou_scores) > best_iou_score:
-    #     #     best_iou_score = sum(val_iou_scores) / len(val_iou_scores)
-    #     #     model.save_weights("files/model.h5")
+        # if sum(val_iou_scores) / len(val_iou_scores) > best_iou_score:
+        #     best_iou_score = sum(val_iou_scores) / len(val_iou_scores)
+        #     model.save_weights("files/model.h5")
 
-    # return TRAIN_IOU_SCORES, VAL_IOU_SCORES, TRAIN_LOSSES, VAL_LOSSES
+    return TRAIN_IOU_SCORES, VAL_IOU_SCORES, TRAIN_LOSSES, VAL_LOSSES
  

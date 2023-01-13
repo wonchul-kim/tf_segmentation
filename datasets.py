@@ -15,12 +15,16 @@ def get_datasets(input_dir, input_height, input_width, input_channel, classes, t
     tmp_dataset = CamvidDataset(x_train_dir, y_train_dir, classes=classes, \
                     augmentation=get_training_augmentation(input_height, input_width))
 
-    image, mask = tmp_dataset[5] # get some sample
-    print("Dataset shape: ", image.shape)
+    idxes = [1, 10, 50, 100]
+    for idx in idxes:
+        image, mask = tmp_dataset[idx] # get some sample
+        print("Dataset shape: ", image.shape)
 
-    visualize({"image" :image, "cars_mask": mask[..., 0].squeeze(), \
-                "sky_mask": mask[..., 1].squeeze(), "background_mask": mask[..., 2].squeeze()}, 
-                fp=osp.join(debug_dir, 'aug.png'))
+        visualize({"image" :image, "cars_mask": mask[..., 0].squeeze(), \
+                    "sky_mask": mask[..., 1].squeeze(), \
+                    "pedestrian_mask": mask[..., 2].squeeze(), \
+                    "background_mask": mask[..., 3].squeeze()}, 
+                    fp=osp.join(debug_dir, 'aug_{}.png'.format(idx)))
 
     ### define datalader for train images
     train_dataset = CamvidDataset(

@@ -13,6 +13,7 @@ from modeling import get_model
 from losses import get_loss_fn
 from train_single_gpu import train_fit, train_ctl
 from train_multiple_gpus import train_ctl_multigpus, train_fit_multigpus
+from utils.helpers import vis_history, vis_res
 
 # train_mode = 'fit'
 # train_mode = 'ctl'
@@ -26,7 +27,8 @@ DATA_DIR = "/HDD/datasets/public/SegNet-Tutorial-master/camvid"
 input_height, input_width, input_channel = 256, 256, 3
 CLASSES = ['car', 'sky', "pedestrian"]
 
-MODEL_NAME = 'unet'
+# MODEL_NAME = 'unet'
+MODEL_NAME = 'deeplabv3plus'
 BACKBONE = 'efficientnetb0'
 BATCH_SIZE = 2
 EPOCHS = 10
@@ -49,7 +51,7 @@ for physical_device in physical_devices:
     except:
         pass
 
-output_dir = osp.join(output_dir, train_mode)
+output_dir = osp.join(output_dir, train_mode + '_' + MODEL_NAME)
 if not osp.exists(output_dir):
     os.makedirs(output_dir)
 debug_dir = osp.join(output_dir, 'debug')
@@ -87,25 +89,7 @@ if train_mode == 'fit' or train_mode == 'ctl':
 
         history = train_fit(model, EPOCHS, optimizer, loss_fn, train_dataloader, val_dataloader, metrics=metrics, callbacks=callbacks)
         
-        # Plot training & validation iou_score values
-        plt.figure(figsize=(30, 5))
-        plt.subplot(121)
-        plt.plot(history.history['iou_score'])
-        plt.plot(history.history['val_iou_score'])
-        plt.title('Model iou_score')
-        plt.ylabel('iou_score')
-        plt.xlabel('Epoch')
-        plt.legend(['Train', 'Val'], loc='upper left')
-
-        # Plot training & validation loss values
-        plt.subplot(122)
-        plt.plot(history.history['loss'])
-        plt.plot(history.history['val_loss'])
-        plt.title('Model loss')
-        plt.ylabel('Loss')
-        plt.xlabel('Epoch')
-        plt.legend(['Train', 'Val'], loc='upper left')
-        plt.savefig(osp.join(output_dir, "{}_res_{}.png".format(train_mode, EPOCHS)))
+        vis_history(history, EPOCHS, train_mode, output_dir)
 
     elif train_mode == 'ctl':
         callbacks = None
@@ -113,25 +97,7 @@ if train_mode == 'fit' or train_mode == 'ctl':
 
         TRAIN_IOU_SCORES, VAL_IOU_SCORES, TRAIN_LOSSES, VAL_LOSSES = train_ctl(model, EPOCHS, optimizer, loss_fn, train_dataloader, val_dataloader, val_dir, weights_dir, metrics=metrics, callbacks=callbacks)
 
-        # Plot training & validation iou_score values
-        plt.figure(figsize=(30, 5))
-        plt.subplot(121)
-        plt.plot(TRAIN_IOU_SCORES)
-        plt.plot(VAL_IOU_SCORES)
-        plt.title('Model iou_score')
-        plt.ylabel('iou_score')
-        plt.xlabel('Epoch')
-        plt.legend(['Train', 'Val'], loc='upper left')
-
-        # Plot training & validation loss values
-        plt.subplot(122)
-        plt.plot(TRAIN_LOSSES)
-        plt.plot(VAL_LOSSES)
-        plt.title('Model loss')
-        plt.ylabel('Loss')
-        plt.xlabel('Epoch')
-        plt.legend(['Train', 'Val'], loc='upper left')
-        plt.savefig(osp.join(output_dir, "{}_res_{}.png".format(train_mode, EPOCHS)))
+        vis_res(TRAIN_IOU_SCORES, VAL_IOU_SCORES, TRAIN_LOSSES, VAL_LOSSES, output_dir, train_mode, EPOCHS)
 
 elif train_mode == 'ctl_multigpus' or train_mode == 'fit_multigpus':
     callbacks = None
@@ -157,25 +123,7 @@ elif train_mode == 'ctl_multigpus' or train_mode == 'fit_multigpus':
 
         history = train_fit_multigpus(model, EPOCHS, train_dataloader, val_dataloader, callbacks=callbacks)
 
-        # Plot training & validation iou_score values
-        plt.figure(figsize=(30, 5))
-        plt.subplot(121)
-        plt.plot(history.history['iou_score'])
-        plt.plot(history.history['val_iou_score'])
-        plt.title('Model iou_score')
-        plt.ylabel('iou_score')
-        plt.xlabel('Epoch')
-        plt.legend(['Train', 'Val'], loc='upper left')
-
-        # Plot training & validation loss values
-        plt.subplot(122)
-        plt.plot(history.history['loss'])
-        plt.plot(history.history['val_loss'])
-        plt.title('Model loss')
-        plt.ylabel('Loss')
-        plt.xlabel('Epoch')
-        plt.legend(['Train', 'Val'], loc='upper left')
-        plt.savefig(osp.join(output_dir, "{}_res_{}.png".format(train_mode, EPOCHS)))
+        vis_history(history, EPOCHS, train_mode, output_dir)
 
     elif train_mode == 'ctl_multigpus':
         train_dist_dataset = get_dist_dataset(strategy, train_dataloader)
@@ -202,22 +150,4 @@ elif train_mode == 'ctl_multigpus' or train_mode == 'fit_multigpus':
         TRAIN_IOU_SCORES, VAL_IOU_SCORES, TRAIN_LOSSES, VAL_LOSSES = train_ctl_multigpus(strategy, model, EPOCHS, optimizer, \
                     loss_fn, train_dist_dataset, val_dist_dataset, val_dataloader, val_dir, weights_dir, compute_loss, metrics=metrics, callbacks=callbacks)
 
-        # Plot training & validation iou_score values
-        plt.figure(figsize=(30, 5))
-        plt.subplot(121)
-        plt.plot(TRAIN_IOU_SCORES)
-        plt.plot(VAL_IOU_SCORES)
-        plt.title('Model iou_score')
-        plt.ylabel('iou_score')
-        plt.xlabel('Epoch')
-        plt.legend(['Train', 'Val'], loc='upper left')
-
-        # Plot training & validation loss values
-        plt.subplot(122)
-        plt.plot(TRAIN_LOSSES)
-        plt.plot(VAL_LOSSES)
-        plt.title('Model loss')
-        plt.ylabel('Loss')
-        plt.xlabel('Epoch')
-        plt.legend(['Train', 'Val'], loc='upper left')
-        plt.savefig(osp.join(output_dir, "{}_res_{}.png".format(train_mode, EPOCHS)))
+        vis_res(TRAIN_IOU_SCORES, VAL_IOU_SCORES, TRAIN_LOSSES, VAL_LOSSES, output_dir, train_mode, EPOCHS)
