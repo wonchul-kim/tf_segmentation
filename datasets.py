@@ -15,10 +15,10 @@ def get_datasets(input_dir, input_height, input_width, input_channel, classes, t
     tmp_dataset = CamvidDataset(x_train_dir, y_train_dir, classes=classes, \
                     augmentation=get_training_augmentation(input_height, input_width))
 
-    idxes = [1, 10, 50, 100]
+    idxes = [1, 10, 30, 40]
     for idx in idxes:
         image, mask = tmp_dataset[idx] # get some sample
-        print("Dataset shape: ", image.shape)
+        print("* Dataset shape: ", image.shape, mask.shape)
 
         visualize({"image" :image, "cars_mask": mask[..., 0].squeeze(), \
                     "sky_mask": mask[..., 1].squeeze(), \

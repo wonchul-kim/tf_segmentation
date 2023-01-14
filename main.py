@@ -15,20 +15,22 @@ from train_single_gpu import train_fit, train_ctl
 from train_multiple_gpus import train_ctl_multigpus, train_fit_multigpus
 from utils.helpers import vis_history, vis_res
 
-# train_mode = 'fit'
+train_mode = 'fit'
 # train_mode = 'ctl'
 # train_mode = 'fit_multigpus'
-train_mode = 'ctl_multigpus'
+# train_mode = 'ctl_multigpus'
 output_dir = './results'
 
 ### test dataloader
 # DATA_DIR = '/DeepLearning/_uinttest/public/camvid'
-DATA_DIR = "/HDD/datasets/public//camvid"
+DATA_DIR = "/HDD/datasets/public/camvid"
 input_height, input_width, input_channel = 256, 256, 3
 CLASSES = ['car', 'sky', "pedestrian"]
 
-# MODEL_NAME = 'unet'
-MODEL_NAME = 'deeplabv3plus'
+# MODEL_NAME = "unet"
+# MODEL_NAME = 'danet'
+# MODEL_NAME = 'deeplabv3plus'
+MODEL_NAME = 'swinunet'
 BACKBONE = 'efficientnetb0'
 BATCH_SIZE = 2
 EPOCHS = 10
