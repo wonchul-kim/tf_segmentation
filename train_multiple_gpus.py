@@ -18,19 +18,30 @@ def train_fit_multigpus(model, epochs, train_dataloader, val_dataloader, callbac
     return history
 
 def train_ctl_multigpus(strategy, model, epochs, optimizer, loss_fn, train_dist_dataset, val_dist_dataset, \
-                                                                    val_dataloader, val_dir, weights_dir, compute_loss, metrics=None, callbacks=None):
+            val_dataloader, val_dir, weights_dir, compute_loss, loss_weights = None, metrics=None, callbacks=None):
     val_unscaled_loss = tf.keras.metrics.Sum(name='val_loss')
     val_unscaled_iou = tf.keras.metrics.Sum(name='val_iou')
 
     @tf.function
-    def train_step(batch):
+    def train_step(batch, loss_weights=None):
         image, label = batch 
         label = tf.cast(label, tf.float32)
         with tf.GradientTape() as tape:
             preds = model(image)
-            # loss = loss_fn(label, preds)
-            loss = compute_loss(label, preds)
-            iou = metrics(label, preds)
+            print("LABELS: ", label)
+            print("PREDSL: ", preds)
+            if loss_weights != None:
+                _losses = 0.
+                _ious = 0.
+                for idx, loss_weight in enumerate(loss_weights):
+                    _losses += compute_loss(label, preds[idx])*loss_weight
+                    _ious += metrics(label, preds[idx])*loss_weight
+                loss = _losses/len(loss_weights)
+                iou = _ious/len(loss_weights)
+            else:
+                # loss = loss_fn(label, preds)
+                loss = compute_loss(label, preds)
+                iou = metrics(label, preds)
 
         gradients = tape.gradient(loss, model.trainable_variables)
         optimizer.apply_gradients(zip(gradients, model.trainable_variables))
@@ -56,12 +67,25 @@ def train_ctl_multigpus(strategy, model, epochs, optimizer, loss_fn, train_dist_
     #     return loss, total_iou, num_train_batches
 
     @tf.function
-    def val_step(batch):
+    def val_step(batch, loss_weights=None):
         image, label = batch 
         label = tf.cast(label, tf.float32)
         preds = model(image)
-        unscaled_loss = loss_fn(label, preds)
-        unscaled_iou = metrics(label, preds)
+        if loss_weights != None:
+            _unscaled_losses = 0.
+            _unscaled_ious = 0.
+            for idx, loss_weight in enumerate(loss_weights):
+                _unscaled_losses += loss_fn(label, preds[idx])*loss_weight
+                _unscaled_ious += metrics(label, preds[idx])*loss_weight
+            unscaled_loss = _unscaled_losses/len(loss_weights)
+            unscaled_iou = _unscaled_ious/len(loss_weights)
+        else:
+            # loss = loss_fn(label, preds)
+            unscaled_loss = loss_fn(label, preds)
+            unscaled_iou = metrics(label, preds)
+
+        # unscaled_loss = loss_fn(label, preds)
+        # unscaled_iou = metrics(label, preds)
         # print("VALVAL -- unscaled_loss: ", unscaled_loss, type(unscaled_loss))
         # print(unscaled_loss.numpy())
         val_unscaled_loss(unscaled_loss)
@@ -89,7 +113,7 @@ def train_ctl_multigpus(strategy, model, epochs, optimizer, loss_fn, train_dist_
         train_total_iou = 0.
         num_train_batches = 0
         for batch_idx, batch in enumerate(train_dist_dataset):
-            per_replica_loss, per_replica_iou = strategy.run(train_step, args=(batch,))
+            per_replica_loss, per_replica_iou = strategy.run(train_step, args=(batch, loss_weights, ))
             train_loss = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_loss, axis=None)
             train_iou = strategy.reduce(tf.distribute.ReduceOp.SUM, per_replica_iou, axis=None)
             train_losses += train_loss
@@ -105,7 +129,7 @@ def train_ctl_multigpus(strategy, model, epochs, optimizer, loss_fn, train_dist_
 
         num_val_batches = 0
         for batch in val_dist_dataset:
-            strategy.run(val_step, args=(batch,))
+            strategy.run(val_step, args=(batch, loss_weights, ))
             num_val_batches += 1
 
         val_loss, val_total_iou = val_unscaled_loss.result(), val_unscaled_iou.result()
@@ -123,9 +147,17 @@ def train_ctl_multigpus(strategy, model, epochs, optimizer, loss_fn, train_dist_
             for __val_step, __val_batch in enumerate(val_dataloader):
                 for _val_step, (_val_image, _val_mask) in enumerate(zip(__val_batch[0], __val_batch[1])):
                     _preds = model(tf.expand_dims(_val_image, 0))
+
+                    if loss_weights != None:
+
+                        __preds = _preds[0]*loss_weights[0]
+                        for idx in range(1, len(loss_weights)):
+                            __preds += _preds[idx]*loss_weights[idx]
+                        _preds = __preds/len(loss_weights)
+                    # print(_preds)
                     visualize({"image" : denormalize(_val_image), "gt_mask": _val_mask, \
                         "pr_mask": _preds.numpy().squeeze()}, fp=osp.join(val_dir, 'val_{}_{}_{}.png'.format(epoch, __val_step, _val_step)))
-                
+            
         # Save the train and validation losses and iou scores for each epoch.
         TRAIN_LOSSES.append(train_avg_loss)
         TRAIN_IOU_SCORES.append(train_avg_iou)

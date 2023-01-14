@@ -19,7 +19,7 @@ from utils.helpers import vis_history, vis_res, normalize_255
 train_mode = 'fit'
 # train_mode = 'ctl'
 # train_mode = 'fit_multigpus'
-# train_mode = 'ctl_multigpus'
+train_mode = 'ctl_multigpus'
 output_dir = './results'
 
 ### test dataloader
@@ -29,9 +29,11 @@ input_height, input_width, input_channel = 256, 256, 3
 CLASSES = ['car', 'sky', "pedestrian"]
 
 # MODEL_NAME = "unet"
-MODEL_NAME = 'danet'
+# MODEL_NAME = 'danet'
 # MODEL_NAME = 'deeplabv3plus'
 # MODEL_NAME = 'swinunet'
+MODEL_NAME = 'unet3plus'
+DEEP_SUPERVISION = True
 BACKBONE = 'efficientnetb0'
 BATCH_SIZE = 2
 EPOCHS = 10
@@ -70,11 +72,17 @@ if not osp.exists(weights_dir):
 
 if MODEL_NAME in ['unet', 'linknet', 'fpn', 'pspnet']:
     preprocess_input = sm.get_preprocessing(BACKBONE)
-elif MODEL_NAME in ['swinunet', 'unet3p']:
+    loss_weights = None
+elif MODEL_NAME in ['swinunet', 'unet3plus']:
     print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
     preprocess_input = normalize_255
+    if 'unet3plus' and DEEP_SUPERVISION:
+        loss_weights = [0.25, 0.25, 0.25, 1.0]
+    else:
+        loss_weights = None
 elif MODEL_NAME in ['danet', 'deeplabv3plus']:
     preprocess_input = None
+    loss_weights = None
 
 num_classes = len(CLASSES) + 1
 
@@ -158,6 +166,7 @@ elif train_mode == 'ctl_multigpus' or train_mode == 'fit_multigpus':
                 return loss
 
         TRAIN_IOU_SCORES, VAL_IOU_SCORES, TRAIN_LOSSES, VAL_LOSSES = train_ctl_multigpus(strategy, model, EPOCHS, optimizer, \
-                    loss_fn, train_dist_dataset, val_dist_dataset, val_dataloader, val_dir, weights_dir, compute_loss, metrics=metrics, callbacks=callbacks)
+                    loss_fn, train_dist_dataset, val_dist_dataset, val_dataloader, val_dir, weights_dir, \
+                    compute_loss, loss_weights=loss_weights, metrics=metrics, callbacks=callbacks)
 
         vis_res(TRAIN_IOU_SCORES, VAL_IOU_SCORES, TRAIN_LOSSES, VAL_LOSSES, output_dir, train_mode, EPOCHS)

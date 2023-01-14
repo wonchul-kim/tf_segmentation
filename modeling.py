@@ -3,6 +3,7 @@ import tensorflow_advanced_segmentation_models as tasm
 from keras_unet_collection._model_swin_unet_2d import swin_transformer_stack, swin_unet_2d_base
 import keras_unet_collection.utils as utils
 from keras_unet_collection._model_swin_unet_2d import swin_unet_2d
+from keras_unet_collection._model_unet_3plus_2d import unet_3plus_2d
 from keras_unet_collection import models, base
 from tensorflow.keras.layers import Input, Conv2D, Dropout, Activation, UpSampling2D, GlobalMaxPooling2D, multiply
 import tensorflow as tf 
@@ -64,6 +65,32 @@ def get_model(model_name, input_height, input_width, input_channel, backbone, nu
         model = swin_unet_2d(input_size=input_size, filter_num_begin=filter_num_begin, n_labels=n_labels, depth=depth, \
                             stack_num_down=stack_num_down, stack_num_up=stack_num_up, patch_size=patch_size, num_heads=num_heads, \
                             window_size=window_size, num_mlp=num_mlp, shift_window=shift_window, name='swin_unet')
+
+    elif model_name == 'unet3plus':
+        filter_num_down = [64, 128, 256, 512]    
+        filter_num_skip = 'auto'
+        filter_num_aggregate = 'auto', 
+        stack_num_down = 2
+        stack_num_up = 1
+        activation = 'ReLU'
+        output_activation = 'Sigmoid'
+        batch_norm = True
+        pool = 'max'
+        unpool = False
+        deep_supervision = True
+
+        n_labels = num_classes
+
+        input_size = (input_height, input_width, input_channel)
+        # model = unet_3plus_2d(input_size=input_size, n_labels=n_labels, filter_num_down=filter_num_down, \
+        #             filter_num_skip=filter_num_skip, filter_num_aggregate=filter_num_aggregate, \
+        #             stack_num_down=stack_num_down, stack_num_up=stack_num_up, output_activation=output_activation, \
+        #             batch_norm=batch_norm, pool=pool, unpool=unpool, deep_supervision=deep_supervision, \
+        #             name='swin_unet')
+        model = unet_3plus_2d(input_size, n_labels=n_labels, filter_num_down=[64, 128, 256, 512], 
+                             filter_num_skip=[64, 64, 64], filter_num_aggregate=256, 
+                             stack_num_down=2, stack_num_up=1, activation='ReLU', output_activation='Sigmoid',
+                             batch_norm=True, pool='max', unpool=False, deep_supervision=True, name='unet3plus')
 
 
     ########## pidnet
