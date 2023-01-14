@@ -1,5 +1,6 @@
 import os
 import os.path as osp
+from selectors import EpollSelector
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -13,7 +14,7 @@ from modeling import get_model
 from losses import get_loss_fn
 from train_single_gpu import train_fit, train_ctl
 from train_multiple_gpus import train_ctl_multigpus, train_fit_multigpus
-from utils.helpers import vis_history, vis_res
+from utils.helpers import vis_history, vis_res, normalize_255
 
 train_mode = 'fit'
 # train_mode = 'ctl'
@@ -28,9 +29,9 @@ input_height, input_width, input_channel = 256, 256, 3
 CLASSES = ['car', 'sky', "pedestrian"]
 
 # MODEL_NAME = "unet"
-# MODEL_NAME = 'danet'
+MODEL_NAME = 'danet'
 # MODEL_NAME = 'deeplabv3plus'
-MODEL_NAME = 'swinunet'
+# MODEL_NAME = 'swinunet'
 BACKBONE = 'efficientnetb0'
 BATCH_SIZE = 2
 EPOCHS = 10
@@ -67,7 +68,14 @@ if not osp.exists(weights_dir):
     os.mkdir(weights_dir)
 
 
-preprocess_input = sm.get_preprocessing(BACKBONE)
+if MODEL_NAME in ['unet', 'linknet', 'fpn', 'pspnet']:
+    preprocess_input = sm.get_preprocessing(BACKBONE)
+elif MODEL_NAME in ['swinunet', 'unet3p']:
+    print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+    preprocess_input = normalize_255
+elif MODEL_NAME in ['danet', 'deeplabv3plus']:
+    preprocess_input = None
+
 num_classes = len(CLASSES) + 1
 
 print(f">>> Start {train_mode} training: ")

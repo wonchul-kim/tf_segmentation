@@ -56,7 +56,21 @@ def visualize(images, fp=None):
         plt.title(' '.join(name.split('_')).title())
         plt.imshow(image)
     plt.savefig(fp)
-    
+
+def normalize_255(image, **Kwargs):
+    transformed_image = image/255.
+
+    return transformed_image
+
+def denormalize_255(image, dtype='uint8'):
+    denormed_image = image*255
+
+    if dtype == 'unint8':
+        return denormed_image.astype(np.uint8)
+    else:
+        return denormed_image
+
+
 # helper function for data visualization    
 def denormalize(x):
     """Scale image to range 0..1 for correct plot"""
