@@ -29,9 +29,10 @@ input_height, input_width, input_channel = 256, 256, 3
 CLASSES = ['car', 'sky', "pedestrian"]
 
 # MODEL_NAME = "unet"
-MODEL_NAME = 'danet'
+# MODEL_NAME = 'danet'
 # MODEL_NAME = 'deeplabv3plus'
 # MODEL_NAME = 'swinunet'
+MODEL_NAME = 'attunet'
 BACKBONE = 'efficientnetb0'
 BATCH_SIZE = 2
 EPOCHS = 10
@@ -70,7 +71,7 @@ if not osp.exists(weights_dir):
 
 if MODEL_NAME in ['unet', 'linknet', 'fpn', 'pspnet']:
     preprocess_input = sm.get_preprocessing(BACKBONE)
-elif MODEL_NAME in ['swinunet', 'unet3p']:
+elif MODEL_NAME in ['swinunet', 'unet3plus', 'attunet']:
     print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
     preprocess_input = normalize_255
 elif MODEL_NAME in ['danet', 'deeplabv3plus']:

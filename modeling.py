@@ -3,6 +3,7 @@ import tensorflow_advanced_segmentation_models as tasm
 from keras_unet_collection._model_swin_unet_2d import swin_transformer_stack, swin_unet_2d_base
 import keras_unet_collection.utils as utils
 from keras_unet_collection._model_swin_unet_2d import swin_unet_2d
+from keras_unet_collection._model_att_unet_2d import att_unet_2d
 from keras_unet_collection import models, base
 from tensorflow.keras.layers import Input, Conv2D, Dropout, Activation, UpSampling2D, GlobalMaxPooling2D, multiply
 import tensorflow as tf 
@@ -64,9 +65,21 @@ def get_model(model_name, input_height, input_width, input_channel, backbone, nu
         model = swin_unet_2d(input_size=input_size, filter_num_begin=filter_num_begin, n_labels=n_labels, depth=depth, \
                             stack_num_down=stack_num_down, stack_num_up=stack_num_up, patch_size=patch_size, num_heads=num_heads, \
                             window_size=window_size, num_mlp=num_mlp, shift_window=shift_window, name='swin_unet')
+            
+    elif model_name == 'attunet':
+        n_labels = num_classes
 
+        # Input section
+        input_size = (input_height, input_width, input_channel)
 
-    ########## pidnet
+        model = att_unet_2d(input_size, filter_num=[64, 128, 256, 512, 1024], n_labels=n_labels, 
+                                stack_num_down=2, stack_num_up=2, activation='ReLU', 
+                                atten_activation='ReLU', attention='add', output_activation='Softmax', 
+                                batch_norm=True, pool=False, unpool=False, 
+                                backbone='VGG16', weights='imagenet', 
+                                freeze_backbone=True, freeze_batch_norm=True, 
+                                name='attunet')
+            ########## pidnet
 
 
     return model
