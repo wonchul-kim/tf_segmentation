@@ -16,8 +16,8 @@ from train_single_gpu import train_fit, train_ctl
 from train_multiple_gpus import train_ctl_multigpus, train_fit_multigpus
 from utils.helpers import vis_history, vis_res, normalize_255
 
-train_mode = 'fit'
-# train_mode = 'ctl'
+# train_mode = 'fit'
+train_mode = 'ctl'
 # train_mode = 'fit_multigpus'
 # train_mode = 'ctl_multigpus'
 output_dir = './results'
@@ -25,16 +25,19 @@ output_dir = './results'
 ### test dataloader
 # DATA_DIR = '/DeepLearning/_uinttest/public/camvid'
 DATA_DIR = "/HDD/datasets/public/camvid"
-input_height, input_width, input_channel = 256, 256, 3
+input_height, input_width, input_channel = 96, 96, 3
 CLASSES = ['car', 'sky', "pedestrian"]
 
 # MODEL_NAME = "unet"
 # MODEL_NAME = 'danet'
 # MODEL_NAME = 'deeplabv3plus'
 # MODEL_NAME = 'swinunet'
-MODEL_NAME = 'attunet'
-BACKBONE = 'efficientnetb0'
-BATCH_SIZE = 2
+# MODEL_NAME = 'attunet'
+# MODEL_NAME = 'linknet'
+MODEL_NAME = 'pidnet'
+BACKBONE = 'resnet50'
+# BACKBONE = 'efficientnetb0'
+BATCH_SIZE = 1
 EPOCHS = 10
 OPT = 'adam' # SGD
 LR = 0.0001
@@ -71,8 +74,7 @@ if not osp.exists(weights_dir):
 
 if MODEL_NAME in ['unet', 'linknet', 'fpn', 'pspnet']:
     preprocess_input = sm.get_preprocessing(BACKBONE)
-elif MODEL_NAME in ['swinunet', 'unet3plus', 'attunet']:
-    print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+elif MODEL_NAME in ['swinunet', 'unet3plus', 'attunet', 'pidnet']:
     preprocess_input = normalize_255
 elif MODEL_NAME in ['danet', 'deeplabv3plus']:
     preprocess_input = None
@@ -85,10 +87,12 @@ if train_mode == 'fit' or train_mode == 'ctl':
             get_datasets(DATA_DIR, input_height, input_width, input_channel, CLASSES, BATCH_SIZE, 1, debug_dir, preprocess_input)
 
     model = get_model(MODEL_NAME, input_height, input_width, input_channel, BACKBONE, num_classes)
+
     if OPT == 'adam':
         optimizer = tf.keras.optimizers.Adam(learning_rate=LR, clipvalue=0.5)
     elif OPT == 'sgd':
         optimizer = tf.keras.optimizers.SGD(learning_rate=LR, momentum=0.9) # LR = 0.2
+
     loss_fn = get_loss_fn(num_classes)
 
     if train_mode == 'fit':

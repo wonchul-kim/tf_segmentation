@@ -24,6 +24,11 @@ def train_ctl(model, epochs, optimizer, loss_fn, train_dataloader, val_dataloade
         print("-- train: ", x.shape, y.shape)
         with tf.GradientTape() as tape:
             preds = model(x)
+            print("-- before: ", preds.shape)
+            preds = tf.keras.layers.UpSampling2D(
+                       size=(int(y.shape[1]/preds.shape[1]), int(y.shape[2]/preds.shape[2])), interpolation='bilinear')(preds)
+
+            print("== after: ", preds.shape)
             y = tf.cast(y, tf.float32)
             loss = loss_fn(y, preds)
             iou = metrics(y, preds)
@@ -36,6 +41,9 @@ def train_ctl(model, epochs, optimizer, loss_fn, train_dataloader, val_dataloade
     @tf.function
     def validation_step(x, y):
         preds = model(x)
+        preds = tf.keras.layers.UpSampling2D(
+                       size=(int(y.shape[1]/preds.shape[1]), int(y.shape[2]/preds.shape[2])), interpolation='bilinear')(preds)
+
         y = tf.cast(y, tf.float32)
         test_loss = loss_fn(y, preds)
         test_iou = metrics(y, preds)
@@ -92,6 +100,9 @@ def train_ctl(model, epochs, optimizer, loss_fn, train_dataloader, val_dataloade
                 for _val_step, _val_batch in enumerate(val_dataloader):
                     _x_val, _y_val = _val_batch[0], _val_batch[1]
                     _preds = model(_x_val)
+                    _preds = tf.keras.layers.UpSampling2D(
+                       size=(int(y.shape[1]/_preds.shape[1]), int(y.shape[2]/_preds.shape[2])), interpolation='bilinear')(_preds)
+
                     visualize({"image" : denormalize(_x_val.squeeze()), "gt_mask": _y_val.squeeze(), \
                         "pr_mask": _preds.numpy().squeeze()}, fp=osp.join(val_dir, 'val_{}_{}.png'.format(epoch, _val_step)))
                 print("------------------------------------------")

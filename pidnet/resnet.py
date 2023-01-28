@@ -62,4 +62,4 @@ def bottleneck_block(x_in, planes, stride=1, downsample=None, no_relu=True):
     if not no_relu:
         x = layers.Activation("relu")(x)
 
-    return 
+    return x

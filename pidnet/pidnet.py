@@ -1,9 +1,11 @@
-from configparser import Interpolation
+# ------------------------------------------------------------------------------
+# Written by Hamid Ali (hamidriasat@gmail.com)
+# ------------------------------------------------------------------------------
 import tensorflow as tf
 import tensorflow.keras.layers as layers
 import tensorflow.keras.models as models
-from resnet import basic_block, bottleneck_block, basicblock_expansion, bottleneck_expansion
-from model_utils import segmentation_head, DAPPPM, PAPPM, PagFM, Bag, Light_Bag
+from pidnet.resnet import basic_block, bottleneck_block, basicblock_expansion, bottleneck_expansion
+from pidnet.model_utils import segmentation_head, DAPPPM, PAPPM, PagFM, Bag, Light_Bag
 
 bn_mom = 0.1
 
@@ -46,21 +48,23 @@ def PIDNet(input_shape=[1024, 2048, 3], m=2, n=3, num_classes=19, planes=64, ppm
     height_output = input_shape[1] // 8
     width_output = input_shape[2] // 8
 
-    # I Branch
+    # I Branch ------------------------------------------------------------------
     x = layers.Conv2D(planes, kernel_size=(3, 3), strides=2, padding='same')(x_in)
     x = layers.BatchNormalization(momentum=bn_mom)(x)
     x = layers.Activation("relu")(x)
-
     x = layers.Conv2D(planes, kernel_size=(3, 3), strides=2, padding='same')(x)
     x = layers.BatchNormalization(momentum=bn_mom)(x)
     x = layers.Activation("relu")(x)
 
+    # layer1
     x = make_layer(x, basic_block, planes, planes, m, expansion=basicblock_expansion)  # layer1
     x = layers.Activation("relu")(x)
 
+    # layer2
     x = make_layer(x, basic_block, planes, planes * 2, m, stride=2, expansion=basicblock_expansion)  # layer2
     x = layers.Activation("relu")(x)
 
+    # layer3
     x_ = make_layer(x, basic_block, planes * 2, planes * 2, m, expansion=basicblock_expansion)  # layer3_
     if m == 2:
         x_d = make_layer(x, basic_block, planes * 2, planes, 0, expansion=basicblock_expansion)  # layer3_d
@@ -71,7 +75,7 @@ def PIDNet(input_shape=[1024, 2048, 3], m=2, n=3, num_classes=19, planes=64, ppm
     x = make_layer(x, basic_block, planes * 2, planes * 4, n, stride=2, expansion=basicblock_expansion)  # layer3
     x = layers.Activation("relu")(x)
 
-    # P Branch
+    # P Branch ------------------------------------------------------------------
     compression3 = layers.Conv2D(planes * 2, kernel_size=(1, 1), use_bias=False)(x)  # compression3
     compression3 = layers.BatchNormalization(momentum=bn_mom)(compression3)
 
@@ -140,8 +144,6 @@ def PIDNet(input_shape=[1024, 2048, 3], m=2, n=3, num_classes=19, planes=64, ppm
         seghead_d = segmentation_head(temp_d, planes, 1)
         model_output = [seghead_p, x_, seghead_d]
     else:
-        print(">>>> ", x_.shape, input_shape)
-        # x_ = layers.UpSampleing2D((int(input_shape[0]/), 8), Interpolation='bilinear')
         model_output = [x_]
 
     model = models.Model(inputs=[x_in], outputs=model_output)
@@ -182,10 +184,8 @@ def get_pred_model(name, input_shape, num_classes):
 if __name__ == "__main__":
     """## Model Compilation"""
     print("Initializing Model")
-    INPUT_SHAPE = [1024, 2048, 3]
-    OUTPUT_CHANNELS = 19
-    # with tf.device("cpu:0"):
-        # create model
+    INPUT_SHAPE = (256, 256, 3)
+    OUTPUT_CHANNELS = 4
     pidnet_model = get_pred_model("pidnet_s", INPUT_SHAPE, OUTPUT_CHANNELS)
     optimizer = tf.keras.optimizers.SGD(momentum=0.9, lr=0.045)
     # compile model
@@ -195,4 +195,3 @@ if __name__ == "__main__":
     # show model summary in output
     pidnet_model.summary()
 
-    print("Done")

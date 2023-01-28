@@ -1,3 +1,4 @@
+from pidnet.pidnet import get_pred_model
 import segmentation_models as sm
 import tensorflow_advanced_segmentation_models as tasm
 from keras_unet_collection._model_swin_unet_2d import swin_transformer_stack, swin_unet_2d_base
@@ -79,7 +80,11 @@ def get_model(model_name, input_height, input_width, input_channel, backbone, nu
                                 backbone='VGG16', weights='imagenet', 
                                 freeze_backbone=True, freeze_batch_norm=True, 
                                 name='attunet')
-            ########## pidnet
+    ########## pidnet
+    elif model_name == 'pidnet':
+        input_size = (input_height, input_width, input_channel)
+        model = get_pred_model("pidnet_s", input_size, num_classes)
+
 
 
     return model
