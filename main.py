@@ -25,16 +25,18 @@ output_dir = './results'
 ### test dataloader
 # DATA_DIR = '/DeepLearning/_uinttest/public/camvid'
 DATA_DIR = "/HDD/datasets/public/camvid"
-input_height, input_width, input_channel = 256, 256, 3
+input_height, input_width, input_channel = 32, 32, 3
 CLASSES = ['car', 'sky', "pedestrian"]
 
 # MODEL_NAME = "unet"
 # MODEL_NAME = 'danet'
 # MODEL_NAME = 'deeplabv3plus'
 # MODEL_NAME = 'swinunet'
-MODEL_NAME = 'attunet'
-BACKBONE = 'efficientnetb0'
-BATCH_SIZE = 2
+# MODEL_NAME = 'attunet'
+MODEL_NAME = 'resunet'
+# BACKBONE = 'efficientnetb0'
+BACKBONE = 'resnet50'
+BATCH_SIZE = 1
 EPOCHS = 10
 OPT = 'adam' # SGD
 LR = 0.0001
@@ -71,8 +73,7 @@ if not osp.exists(weights_dir):
 
 if MODEL_NAME in ['unet', 'linknet', 'fpn', 'pspnet']:
     preprocess_input = sm.get_preprocessing(BACKBONE)
-elif MODEL_NAME in ['swinunet', 'unet3plus', 'attunet']:
-    print(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+elif MODEL_NAME in ['swinunet', 'unet3plus', 'attunet', 'resunet']:
     preprocess_input = normalize_255
 elif MODEL_NAME in ['danet', 'deeplabv3plus']:
     preprocess_input = None

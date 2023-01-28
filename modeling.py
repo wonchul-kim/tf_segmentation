@@ -4,6 +4,7 @@ from keras_unet_collection._model_swin_unet_2d import swin_transformer_stack, sw
 import keras_unet_collection.utils as utils
 from keras_unet_collection._model_swin_unet_2d import swin_unet_2d
 from keras_unet_collection._model_att_unet_2d import att_unet_2d
+from keras_unet_collection._model_resunet_a_2d import resunet_a_2d
 from keras_unet_collection import models, base
 from tensorflow.keras.layers import Input, Conv2D, Dropout, Activation, UpSampling2D, GlobalMaxPooling2D, multiply
 import tensorflow as tf 
@@ -71,7 +72,6 @@ def get_model(model_name, input_height, input_width, input_channel, backbone, nu
 
         # Input section
         input_size = (input_height, input_width, input_channel)
-
         model = att_unet_2d(input_size, filter_num=[64, 128, 256, 512, 1024], n_labels=n_labels, 
                                 stack_num_down=2, stack_num_up=2, activation='ReLU', 
                                 atten_activation='ReLU', attention='add', output_activation='Softmax', 
@@ -79,7 +79,18 @@ def get_model(model_name, input_height, input_width, input_channel, backbone, nu
                                 backbone='VGG16', weights='imagenet', 
                                 freeze_backbone=True, freeze_batch_norm=True, 
                                 name='attunet')
-            ########## pidnet
+    elif model_name == 'resunet':
+        input_size = (input_height, input_width, input_channel)
+        model = resunet_a_2d(input_size, [32, 64, 128, 256, 512, 1024], 
+                            dilation_num=[1, 3, 15, 31], 
+                            n_labels=num_classes, aspp_num_down=256, aspp_num_up=128, 
+                            activation='ReLU', 
+                            output_activation='Softmax', #'Sigmoid',
+                            batch_norm=True, pool=False, unpool='nearest', name='resunet')
+        
+        
+        
+    ########## pidnet
 
 
     return model
