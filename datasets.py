@@ -44,7 +44,8 @@ def get_datasets(input_dir, input_height, input_width, input_channel, classes, t
             print("* Image Max: ", np.max(_val_image))
             print("* Image Min: ", np.min(_val_image))
 
-            visualize({"image" :_val_image, "cars_mask": _val_mask[..., 0].squeeze(), \
+            visualize({"image" :_val_image, 
+                       "cars_mask": _val_mask[..., 0].squeeze(), \
                         "sky_mask": _val_mask[..., 1].squeeze(), \
                         "pedestrian_mask": _val_mask[..., 2].squeeze(), \
                         "background_mask": _val_mask[..., 3].squeeze()}, 

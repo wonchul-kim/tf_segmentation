@@ -182,16 +182,24 @@ def get_pred_model(name, input_shape, num_classes):
 
 
 if __name__ == "__main__":
+    import numpy as np 
+    
     """## Model Compilation"""
     print("Initializing Model")
     INPUT_SHAPE = (256, 256, 3)
     OUTPUT_CHANNELS = 4
-    pidnet_model = get_pred_model("pidnet_s", INPUT_SHAPE, OUTPUT_CHANNELS)
+    model = get_pred_model("pidnet_s", INPUT_SHAPE, OUTPUT_CHANNELS)
     optimizer = tf.keras.optimizers.SGD(momentum=0.9, lr=0.045)
     # compile model
-    pidnet_model.compile(loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True),
+    model.compile(loss=tf.keras.losses.CategoricalCrossentropy(from_logits=True),
                             optimizer=optimizer,
                             metrics=['accuracy'])
     # show model summary in output
-    pidnet_model.summary()
+    model.summary()
 
+    input = tf.random.normal((1, 256, 256, 3))
+    print(np.unique(input.numpy().squeeze()))
+    
+    preds = model(input)
+    print(preds.shape)
+    print(np.unique(preds.numpy().squeeze()))

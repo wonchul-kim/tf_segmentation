@@ -38,9 +38,9 @@ MODEL_NAME = 'pidnet'
 BACKBONE = 'resnet50'
 # BACKBONE = 'efficientnetb0'
 BATCH_SIZE = 1
-EPOCHS = 10
+EPOCHS = 100
 OPT = 'adam' # SGD
-LR = 0.0001
+LR = 0.001
 
 # OPT = 'sgd' # danet
 # LR = 0.2
@@ -74,9 +74,9 @@ if not osp.exists(weights_dir):
 
 if MODEL_NAME in ['unet', 'linknet', 'fpn', 'pspnet']:
     preprocess_input = sm.get_preprocessing(BACKBONE)
-elif MODEL_NAME in ['swinunet', 'unet3plus', 'attunet', 'pidnet']:
+elif MODEL_NAME in ['swinunet', 'unet3plus', 'attunet']:
     preprocess_input = normalize_255
-elif MODEL_NAME in ['danet', 'deeplabv3plus']:
+elif MODEL_NAME in ['danet', 'deeplabv3plus', 'pidnet']:
     preprocess_input = None
 
 num_classes = len(CLASSES) + 1

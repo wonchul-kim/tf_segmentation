@@ -21,14 +21,24 @@ def train_fit(model, epochs, optimizer, loss_fn, train_dataloader, val_dataloade
 def train_ctl(model, epochs, optimizer, loss_fn, train_dataloader, val_dataloader, val_dir, weights_dir, metrics=None, callbacks=None):
     @tf.function
     def train_step(x, y):
-        print("-- train: ", x.shape, y.shape)
+        # print("-- train: ", x.shape, y.shape)
         with tf.GradientTape() as tape:
             preds = model(x)
-            print("-- before: ", preds.shape)
+            # print("-- before: ", preds.shape)
+            # print(np.unique(preds.numpy().squeeze()))
+            # for i in range(len(preds)):
+            #     preds[i] = tf.keras.layers.UpSampling2D(
+            #            size=(int(y.shape[1]/preds.shape[1]), 
+            #                  int(y.shape[2]/preds.shape[2])), 
+            #            interpolation='bilinear')(preds[i])
+
+            
             preds = tf.keras.layers.UpSampling2D(
                        size=(int(y.shape[1]/preds.shape[1]), int(y.shape[2]/preds.shape[2])), interpolation='bilinear')(preds)
 
-            print("== after: ", preds.shape)
+            # print("== after: ", preds.shape)
+            # print(np.unique(preds.numpy().squeeze()))
+            # print(np.unique(preds.numpy().squeeze()))
             y = tf.cast(y, tf.float32)
             loss = loss_fn(y, preds)
             iou = metrics(y, preds)
@@ -102,7 +112,7 @@ def train_ctl(model, epochs, optimizer, loss_fn, train_dataloader, val_dataloade
                     _preds = model(_x_val)
                     _preds = tf.keras.layers.UpSampling2D(
                        size=(int(y.shape[1]/_preds.shape[1]), int(y.shape[2]/_preds.shape[2])), interpolation='bilinear')(_preds)
-
+                    print(np.unique(_preds.numpy().squeeze()))
                     visualize({"image" : denormalize(_x_val.squeeze()), "gt_mask": _y_val.squeeze(), \
                         "pr_mask": _preds.numpy().squeeze()}, fp=osp.join(val_dir, 'val_{}_{}.png'.format(epoch, _val_step)))
                 print("------------------------------------------")

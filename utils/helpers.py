@@ -22,6 +22,7 @@ def vis_history(history, epoch, train_mode, output_dir):
     plt.xlabel('Epoch')
     plt.legend(['Train', 'Val'], loc='upper left')
     plt.savefig(osp.join(output_dir, "{}_res_{}.png".format(train_mode, epoch)))
+    plt.close()
 
 def vis_res(TRAIN_IOU_SCORES, VAL_IOU_SCORES, TRAIN_LOSSES, VAL_LOSSES, output_dir, train_mode, epoch):
     # Plot training & validation iou_score values
@@ -43,6 +44,7 @@ def vis_res(TRAIN_IOU_SCORES, VAL_IOU_SCORES, TRAIN_LOSSES, VAL_LOSSES, output_d
     plt.xlabel('Epoch')
     plt.legend(['Train', 'Val'], loc='upper left')
     plt.savefig(osp.join(output_dir, "{}_res_{}.png".format(train_mode, epoch)))
+    plt.close()
 
 # helper function for data visualization
 def visualize(images, fp=None):
@@ -56,6 +58,7 @@ def visualize(images, fp=None):
         plt.title(' '.join(name.split('_')).title())
         plt.imshow(image)
     plt.savefig(fp)
+    plt.close()
 
 def normalize_255(image, **Kwargs):
     transformed_image = image/255.
